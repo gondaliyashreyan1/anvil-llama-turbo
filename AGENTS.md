@@ -1,4 +1,4 @@
-# Instructions for llama.cpp
+# Instructions for Anvil (llama-turbo backend)
 
 > [!IMPORTANT]
 > This project does **not** accept pull requests that are fully or predominantly AI-generated. AI tools may be utilized solely in an assistive capacity.
