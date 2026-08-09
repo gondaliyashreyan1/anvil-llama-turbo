@@ -24,8 +24,12 @@
  * -Wmissing-prototypes under upstream CI's -Werror policy). */
 GGML_API void turbo_cpu_fwht_inverse(float * x, int group_size);
 
-/* Global: WHT group size for CPU quantize path (set by CPU SET_ROWS handler) */
-GGML_API int turbo3_cpu_wht_group_size = 0;
+/* Global: WHT group size for CPU quantize path (set by CPU SET_ROWS handler).
+ * Defined here WITHOUT GGML_API: in non-shared builds GGML_API expands to
+ * `extern`, and `extern int x = 0` trips Clang's -Wextern-initializer.
+ * ggml-cpu/ops.cpp declares it with GGML_API (keeping the attribute for
+ * shared builds); this file provides the actual definition. */
+int turbo3_cpu_wht_group_size = 0;
 
 /* ---------- constants ---------- */
 
