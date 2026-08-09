@@ -838,6 +838,26 @@ const llama_model_loader::llama_tensor_weight * llama_model_loader::get_weight(c
         return &pos->second;
     }
 
+    // Converter-compatibility aliases: some GGUF exporters (notably Ollama)
+    // use the generic llama.cpp tensor name where the architecture's canonical
+    // name differs (e.g. the lfm2 final norm: HF converters emit
+    // "token_embd_norm", Ollama exports emit "output_norm"). This is the
+    // single place converter naming quirks are absorbed -- add entries here,
+    // never in per-model code. Only consulted when the canonical name is
+    // absent, so a real tensor with either name always wins.
+    static const std::pair<const char *, const char *> ALIASES[] = {
+        { "token_embd_norm.weight", "output_norm.weight" },  // lfm2 / lfm2moe
+    };
+    for (const auto & a : ALIASES) {
+        if (std::strcmp(name, a.first) == 0) {
+            pos = weights_map.find(a.second);
+            if (pos != weights_map.end()) {
+                return &pos->second;
+            }
+            break;
+        }
+    }
+
     return nullptr;
 }
 

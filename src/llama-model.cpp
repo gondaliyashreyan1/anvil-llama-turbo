@@ -1106,6 +1106,30 @@ void llama_model_base::load_hparams(llama_model_loader & ml) {
     std::fill(hparams.swiglu_clamp_shexp.begin(), hparams.swiglu_clamp_shexp.end(), 0.0f);
 
     ml.get_key_or_arr(LLM_KV_FEED_FORWARD_LENGTH,  hparams.n_ff_arr,   hparams.n_layer(), false);
+
+    // Converter robustness: some GGUF exporters (notably Ollama) write an
+    // incorrect feed_forward_length in the header while the actual tensors are
+    // correct. The weights are ground truth, so when a dense ffn tensor
+    // disagrees with the header value, trust the tensor. This is generic -- it
+    // applies to every architecture, and a correct header is a no-op. MoE
+    // layers (no dense ffn_up) and fused-gate variants are left untouched.
+    uint32_t n_ff_corrected = 0;
+    uint32_t first_il = 0, first_n_ff = 0;
+    for (uint32_t il = 0; il < hparams.n_layer(); ++il) {
+        if (hparams.n_ff_arr[il] == 0) continue;   // no header value: leave arch fallbacks alone
+        const std::string tname = "blk." + std::to_string(il) + ".ffn_up.weight";
+        const ggml_tensor * t = ml.get_tensor_meta(tname.c_str());
+        if (t && t->ne[1] > 0 && static_cast<uint32_t>(t->ne[1]) != hparams.n_ff_arr[il]) {
+            hparams.n_ff_arr[il] = static_cast<uint32_t>(t->ne[1]);
+            if (n_ff_corrected == 0) { first_il = il; first_n_ff = hparams.n_ff_arr[il]; }
+            n_ff_corrected++;
+        }
+    }
+    if (n_ff_corrected > 0) {
+        LLAMA_LOG_WARN("%s: header feed_forward_length mismatched actual tensors; corrected %u layer(s) (e.g. blk.%u n_ff=%u)\n",
+                       __func__, n_ff_corrected, first_il, first_n_ff);
+    }
+
     ml.get_key_or_arr(LLM_KV_ATTENTION_HEAD_COUNT, hparams.n_head_arr, hparams.n_layer(), false);
 
     // Populate deepstack_mapping_arr - initialized to -1 (no deepstack)
