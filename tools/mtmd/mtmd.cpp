@@ -1896,10 +1896,10 @@ mtmd_decoder_pos mtmd_image_tokens_get_decoder_pos(const mtmd_image_tokens * ima
     switch (image_tokens->pos) {
         case MTMD_POS_TYPE_MROPE:
             {
-                pos.t = pos_0;
+                pos.t = pos_0 + i;
                 pos.x = pos_0 + (i % image_tokens->nx);
                 pos.y = pos_0 + (i / image_tokens->nx);
-                pos.z = 0; // unused for now
+                pos.z = 0;
             } break;
         case MTMD_POS_TYPE_NORMAL:
             {
